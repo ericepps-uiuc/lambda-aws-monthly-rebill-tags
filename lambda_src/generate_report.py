@@ -20,7 +20,8 @@ from botocore.exceptions import ClientError
 #       'tag-value': '[value of tag]'     | pass blank value to retrieve all tags
 #       'tag-value-default': '[default]'  | default value if desired for all untagged resources
 #       'days': 30                        | number of days to go back, 30=1 month, 180=6 months, etc.
-#       'show-chart': 1                   | add this if you want the chart to be displayed. no chart unless this is set to 1
+#       'attachment-type': 'csv'          | specify the attachment file type, e.g., 'csv' or 'xlsx'
+#       'show-chart': 1                   | add this if you want the chart to be displayed. no chart unless this is set to 1 (attachment-type must be 'xlsx')
 #       'email-from': '[email sent from]' | must be confirmed in AWS SES https://docs.aws.amazon.com/ses/latest/dg/creating-identities.html#verify-email-addresses-procedure
 #       'email-to': '[email sent to]'     | must be confirmed in AWS SES https://docs.aws.amazon.com/ses/latest/dg/creating-identities.html#verify-email-addresses-procedure
 #   }
@@ -96,6 +97,11 @@ def lambda_handler(event, context):
     arr_service = []
     arr_month = []
     arr_amount = []
+
+    # prepare CSV file
+    csv_lines = []
+    csv_lines.append("Account,Tag,Service,Month,Amount")
+    
     for timeperiod in response_cost["ResultsByTime"]:
         month = timeperiod["TimePeriod"]["Start"].replace("-01","")
         for groups in timeperiod["Groups"]:
@@ -114,6 +120,9 @@ def lambda_handler(event, context):
             arr_service.append(service)
             arr_month.append(month) 
             arr_amount.append(amount)
+
+            # add CSV line
+            csv_lines.append("{}, {}, {}, {}, {}".format(account_number, tag_value, service, month, amount))
 
     # Get the number of rows (plus 1) for use in formatting Excel file
     num_rows = len(arr_amount) + 1
@@ -169,12 +178,21 @@ def lambda_handler(event, context):
     xl_writer.close()
     # get file content from stream
     xl_file_att = xl_output.getvalue()
+
+    # create CSV file content
+    csv_file_att = '\n'.join(csv_lines).encode('utf-8')
+
+    # choose whether to send CSV or Excel file
+    if event['attachment_type'] == 'xlsx':
+        file_att = xl_file_att
+    else:
+        file_att = csv_file_att
     
     # send email with Excel file attachment data
-    send_email(event, tag_email_display, 'from {} to {}'.format(start, end), xl_file_att)
+    send_email(event, tag_email_display, 'from {} to {}'.format(start, end), file_att, event['attachment_type'])
 
 
-def send_email(event, tag, report_dates, attachment):
+def send_email(event, tag, report_dates, attachment, attachment_type):
     msg = MIMEMultipart()
     msg['From'] = event['email-from']
     msg['To']  = event['email-to']
@@ -189,7 +207,7 @@ def send_email(event, tag, report_dates, attachment):
 
     # the attachment
     part = MIMEApplication(attachment)
-    part.add_header('Content-Disposition', 'attachment', filename="AWS-MonthlyCostByTag-{}.xlsx".format(tag).replace(' ','_'))
+    part.add_header('Content-Disposition', 'attachment', filename="AWS-MonthlyCostByTag-{}.{}".format(tag, attachment_type).replace(' ','_'))
     msg.attach(part)
 
     # Create an AWS Simple Email Service (SES) client
