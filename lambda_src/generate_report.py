@@ -183,13 +183,13 @@ def lambda_handler(event, context):
     csv_file_att = '\n'.join(csv_lines).encode('utf-8')
 
     # choose whether to send CSV or Excel file
-    if event['attachment_type'] == 'xlsx':
+    if event['attachment-type'] == 'xlsx':
         file_att = xl_file_att
     else:
         file_att = csv_file_att
     
     # send email with Excel file attachment data
-    send_email(event, tag_email_display, 'from {} to {}'.format(start, end), file_att, event['attachment_type'])
+    send_email(event, tag_email_display, 'from {} to {}'.format(start, end), file_att, event['attachment-type'])
 
 
 def send_email(event, tag, report_dates, attachment, attachment_type):
