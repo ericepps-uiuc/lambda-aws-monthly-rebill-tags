@@ -189,10 +189,10 @@ def lambda_handler(event, context):
         file_att = csv_file_att
     
     # send email with Excel file attachment data
-    send_email(event, tag_email_display, 'from {} to {}'.format(start, end), file_att, event['attachment-type'])
+    send_email(event, account_number, tag_email_display, 'from {} to {}'.format(start, end), file_att, event['attachment-type'])
 
 
-def send_email(event, tag, report_dates, attachment, attachment_type):
+def send_email(event, account_number, tag, report_dates, attachment, attachment_type):
     msg = MIMEMultipart()
     msg['From'] = event['email-from']
     msg['To']  = event['email-to']
@@ -207,7 +207,7 @@ def send_email(event, tag, report_dates, attachment, attachment_type):
 
     # the attachment
     part = MIMEApplication(attachment)
-    part.add_header('Content-Disposition', 'attachment', filename="AWS-MonthlyCostByTag-{}.{}".format(tag, attachment_type).replace(' ','_'))
+    part.add_header('Content-Disposition', 'attachment', filename="AWS-MonthlyCostByTag-{}-{}.{}".format(tag, account_number, attachment_type).replace(' ','_'))
     msg.attach(part)
 
     # Create an AWS Simple Email Service (SES) client
