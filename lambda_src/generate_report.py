@@ -122,7 +122,7 @@ def lambda_handler(event, context):
             arr_amount.append(amount)
 
             # add CSV line
-            csv_lines.append("{}, {}, {}, {}, {}".format(account_number, tag_value, service, month, amount))
+            csv_lines.append("{}, {}, {}, {}, {:,.3f}".format(account_number, tag_value, service, month, amount))
 
     # Get the number of rows (plus 1) for use in formatting Excel file
     num_rows = len(arr_amount) + 1
